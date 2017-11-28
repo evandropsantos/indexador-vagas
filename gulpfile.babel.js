@@ -10,14 +10,17 @@ import browserSync from 'browser-sync'
 import nodemon from 'gulp-nodemon'
 import plamber from 'gulp-plumber'
 import path from 'path'
+import { Script } from 'vm';
 
 let bSync = browserSync.create()
 
 const PATHS = {
     src_scss    : './src/public/scss',
     src_js      : './src/public/js',
+    src_node    : './src/',
     dist_scss   : './dist/public/css',
-    dist_js     : './dist/public/js'
+    dist_js     : './dist/public/js',
+    dist_node   : './dist/'
 }
 
 let onError = (err) => {
@@ -41,4 +44,33 @@ gulp.task('babel', () => {
                 .pipe(plumber( { errorHandler: onError } ))
                 .pipe(babel( { presets: ['env'] } ))
                 .pipe(gulp.dest(PATHS.dist_js))
+})
+
+gulp.task('babel-server', () => {
+    return gulp.src(path.join(PATHS.src_node, '*.js'), {base: '.'})
+                .pipe(babel( {presets: ['es2015', 'stage-2', 'transform-runtime']} ))
+                .pipe(gulp.dest(PATHS.dist_node))
+})
+
+gulp.task('nodemon', (cb) => {
+    let started = false
+
+    script: 'dist/app.js'
+}).on('start', () => {
+    if(!started) {
+        cb()
+        started = true
+    }
+})
+
+gulp.task('default', ['sass', 'babel', 'babel-server', 'nodemon'], () => {
+    bSync.init(null, {
+        port: 3000,
+        files: ['./dist/**/*']
+    })
+
+    gulp.watch('*.hbs').on('change', bSync.reload)
+    gulp.watch(path.join(PATHS.src_scss, '*.scss'), ['sass'])
+    gulp.watch(path.join(PATHS.src_js, '*.js'), ['babel'])
+    gulp.watch(path.join(PATHS.src_node, '*.js'), ['babel-server'])
 })
